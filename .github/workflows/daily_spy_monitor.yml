@@ -1,0 +1,58 @@
+name: Daily SPY Risk Monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    # UTC time. 23:30 UTC = 4:30pm Pacific during daylight saving time.
+    # This is after US market close and gives yfinance time to update.
+    - cron: "30 23 * * 1-5"
+
+permissions:
+  contents: read
+
+jobs:
+  run-monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run SPY monitor
+        run: |
+          python spy_daily_prebreak_riskoff_monitor.py \
+            --download \
+            --output-dir outputs/spy_daily_prebreak_monitor \
+            --overwrite-log \
+            --signal-log-mode latest_only \
+            --quiet
+
+      - name: Show generated files
+        run: |
+          ls -lah outputs/spy_daily_prebreak_monitor
+          echo "---- current_state_report.txt ----"
+          sed -n '1,120p' outputs/spy_daily_prebreak_monitor/current_state_report.txt
+
+      - name: Send Telegram report
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python send_telegram_report.py
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: spy-risk-monitor-output
+          path: outputs/spy_daily_prebreak_monitor/
