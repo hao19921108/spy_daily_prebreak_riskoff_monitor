@@ -1,5 +1,3 @@
-numpy
-pandas
-matplotlib
-yfinance
-requests
+-r projects/macro_regime/requirements.txt
+-r projects/spy_risk_monitor/requirements.txt
+-r projects/spy_risk_monitor_macro_enhanced/requirements.txt

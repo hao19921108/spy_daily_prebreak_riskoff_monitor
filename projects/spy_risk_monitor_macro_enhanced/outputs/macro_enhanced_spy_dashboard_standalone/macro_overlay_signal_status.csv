@@ -1,0 +1,37 @@
+overlay,active_today,layer,timing_class,current_age_days,overlay_age_days,overlay_age_bucket,is_fresh_activation,is_persistent_background,timing_note,risk_stage,best_yellow_lead_window,best_prebreak_lead_window,path_anatomy,historical_clustering_verdict,current_clustering_status,sample_flag,notes
+RECESSION_FEAR_RATE_DOWN,False,RATES_DRIVER,FAST_RISK_OVERLAY,0,0,inactive,False,False,,INACTIVE,1w,1w-2w,REBOUND_DOMINANT,IID_LIKE,,static_reference,monitoring context only
+RECESSION_FEAR_EARLY,False,RATES_DRIVER,FAST_RISK_OVERLAY,0,0,inactive,False,False,,INACTIVE,1w,1w-2w,REBOUND_DOMINANT,IID_LIKE,,static_reference,monitoring context only
+HOSTILE_RATE_UP,False,RATES_DRIVER,FAST_RISK_OVERLAY,0,0,inactive,False,False,,INACTIVE,,1w-2w,REBOUND_DOMINANT,IID_LIKE,,static_reference,monitoring context only
+WTI_TAIL_STRESS_ACTIVATION,False,WTI_PRICE_ONLY,FAST_RISK_OVERLAY,0,0,inactive,False,False,"WTI tail-stress has persisted beyond 21 trading days. Treat as commodity-stress background, not a fresh fast trigger.",INACTIVE,,1w-2w,REBOUND_DOMINANT,IID_LIKE,,static_reference,monitoring context only
+WTI_TAIL_STRESS_FAST,False,WTI_PRICE_ONLY,FAST_RISK_OVERLAY,0,0,inactive,False,False,"WTI tail-stress has persisted beyond 21 trading days. Treat as commodity-stress background, not a fresh fast trigger.",INACTIVE,,1w-2w,REBOUND_DOMINANT,IID_LIKE,,static_reference,monitoring context only
+RATE_BURDEN,False,RATE_PERSISTENCE,FAST_RISK_OVERLAY,0,0,inactive,False,False,,INACTIVE,,1w-2w,REBOUND_DOMINANT,IID_LIKE,,static_reference,monitoring context only
+HIGH_RATE_4_75,False,RATE_PERSISTENCE,FAST_RISK_OVERLAY,0,0,inactive,False,False,,INACTIVE,,1w-2w,REBOUND_DOMINANT,IID_LIKE,,static_reference,monitoring context only
+OIL_PERSISTENT_PRESSURE,True,OIL_TRANSMISSION,SLOW_BUILDUP_OVERLAY,59,59,active,False,False,,LATE_PERSISTENT_PRESSURE,,3w-8w,THREE_WEEK_DANGER,IID_LIKE,IID_LIKE,static_reference,monitoring context only
+OIL_BREAKEVEN_CONFIRMATION,False,OIL_TRANSMISSION,SLOW_BUILDUP_OVERLAY,0,0,inactive,False,False,,INACTIVE,,3w-8w,FOUR_TO_EIGHT_WEEK_BUILDUP,IID_LIKE,,static_reference,monitoring context only
+OIL_RATE_CONFIRMATION,False,OIL_TRANSMISSION,SLOW_BUILDUP_OVERLAY,0,0,inactive,False,False,,INACTIVE,,3w-8w,FOUR_TO_EIGHT_WEEK_BUILDUP,IID_LIKE,,static_reference,monitoring context only
+OIL_REAL_YIELD_CONFIRMATION,False,OIL_TRANSMISSION,SLOW_BUILDUP_OVERLAY,0,0,inactive,False,False,,INACTIVE,,3w-8w,EARLY_DANGER,IID_LIKE,,static_reference,monitoring context only
+REAL_YIELD_TIGHTENING,False,RATES_DRIVER,SLOW_BUILDUP_OVERLAY,0,0,inactive,False,False,,INACTIVE,,3w-8w,THREE_WEEK_DANGER,IID_LIKE,,static_reference,monitoring context only
+GLD_DEFENSIVE_PERSISTENCE,False,GLD_PRICE_ONLY,SLOW_BUILDUP_OVERLAY,0,0,inactive,False,False,,INACTIVE,,3w-8w,FLAT_BACKGROUND,IID_LIKE,,static_reference,monitoring context only
+GLD_RESILIENT_AGAINST_RATES,False,GLD_PRICE_ONLY,SLOW_BUILDUP_OVERLAY,0,0,inactive,False,False,,INACTIVE,,3w-8w,EARLY_DANGER,IID_LIKE,,static_reference,monitoring context only
+GLD_COMMODITY_STRESS_CONFIRMATION,False,GLD_PRICE_ONLY,SLOW_BUILDUP_OVERLAY,0,0,inactive,False,False,,INACTIVE,,3w-8w,FOUR_TO_EIGHT_WEEK_BUILDUP,IID_LIKE,,static_reference,monitoring context only
+GROWTH_REFLATION_ACCEPTED,False,RATES_DRIVER,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+GLD_REFLATION_SUPPORT,False,GLD_PRICE_ONLY,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+POLICY_RELIEF_RATE_DOWN,False,RATES_DRIVER,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+RECESSION_FEAR_MIDDLE,False,RATES_DRIVER,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+RECESSION_FEAR_LATE,False,RATES_DRIVER,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+OIL_FRESH_SHOCK,False,OIL_TRANSMISSION,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+WTI_TAIL_STRESS,True,WTI_PRICE_ONLY,PERSISTENT_BACKGROUND,80,80,structural_64d_plus,False,True,"WTI tail-stress has persisted beyond 21 trading days. Treat as commodity-stress background, not a fresh fast trigger.",STRUCTURAL_WTI_TAIL_BACKGROUND,,,,IID_LIKE,IID_LIKE,static_reference,monitoring context only
+WTI_TAIL_STRESS_EXTENDED,False,WTI_PRICE_ONLY,BENIGN_OR_CONFLICT,0,0,inactive,False,False,"WTI tail-stress has persisted beyond 21 trading days. Treat as commodity-stress background, not a fresh fast trigger.",INACTIVE,,,,,,static_reference,monitoring context only
+WTI_TAIL_STRESS_PERSISTENT_BACKGROUND,True,WTI_PRICE_ONLY,PERSISTENT_BACKGROUND,59,59,active,False,True,"WTI tail-stress has persisted beyond 21 trading days. Treat as commodity-stress background, not a fresh fast trigger.",STRUCTURAL_WTI_TAIL_BACKGROUND,,,,IID_LIKE,IID_LIKE,static_reference,monitoring context only
+WTI_TAIL_STRESS_PERSISTENT,True,WTI_PRICE_ONLY,BENIGN_OR_CONFLICT,76,76,active,False,False,"WTI tail-stress has persisted beyond 21 trading days. Treat as commodity-stress background, not a fresh fast trigger.",INACTIVE,,,,,,static_reference,monitoring context only
+WTI_STRESS_ACTIVE,True,WTI_PRICE_ONLY,BENIGN_OR_CONFLICT,102,102,active,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+WTI_STRESS_TOO_PERSISTENT,False,WTI_PRICE_ONLY,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+FRESH_HIGH_RATE_4_5,False,RATE_PERSISTENCE,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+PERSISTENT_HIGH_RATE_4_5_SHORT,False,RATE_PERSISTENCE,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+PERSISTENT_HIGH_RATE_4_5_MEDIUM,False,RATE_PERSISTENCE,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+PERSISTENT_HIGH_RATE_4_5_LONG,False,RATE_PERSISTENCE,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+HIGH_RATE_5_0,False,RATE_PERSISTENCE,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+GLD_BULLISH_IMPULSE,False,GLD_PRICE_ONLY,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+GLD_WHIPSAW_REBOUND,False,GLD_PRICE_ONLY,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+GLD_SAFE_HAVEN_CONFIRMATION,False,GLD_PRICE_ONLY,BENIGN_OR_CONFLICT,0,0,inactive,False,False,,INACTIVE,,,,,,static_reference,monitoring context only
+GLD_NO_SIGNAL,True,GLD_PRICE_ONLY,BENIGN_OR_CONFLICT,8,8,active,False,False,,INACTIVE,,,,,,static_reference,monitoring context only

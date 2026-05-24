@@ -1,0 +1,7 @@
+.venv/
+.DS_Store
+**/.DS_Store
+**/__pycache__/
+**/*.pyc
+**/daily_regime_output.txt
+**/telegram_summary.txt

@@ -1,0 +1,11 @@
+source,found,rows,start_date,end_date,key_columns,missing_columns,status
+SPY,True,5034,2006-05-19,2026-05-22,date,,ok
+GLD,True,5034,2006-05-19,2026-05-22,date,,ok
+WTI,True,5034,2006-05-19,2026-05-22,date,,ok
+aligned_oil_rates_panel,False,0,,,,date|DGS10,missing
+DGS2,True,5220,2006-05-19,2026-05-21,date,,ok
+DGS10,True,5220,2006-05-19,2026-05-21,date,,ok
+T5YIE,True,5221,2006-05-19,2026-05-22,date,,ok
+T10YIE,True,5221,2006-05-19,2026-05-22,date,,ok
+DFII10,True,5220,2006-05-19,2026-05-21,date,,ok
+VIX,True,5034,2006-05-19,2026-05-22,date,,ok

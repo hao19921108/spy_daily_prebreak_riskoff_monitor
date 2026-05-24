@@ -1,0 +1,37 @@
+# Macro-Enhanced SPY Dashboard Standalone
+
+## Current SPY Baseline
+- date: 2026-05-22 00:00:00
+- close: 745.64
+- state: whipsaw_aware
+- daily label: YELLOW_WHIPSAW_NOT_RISK_OFF
+- group: SPY_YELLOW
+
+## Current Macro Cause
+- cause: CAUSE_OIL_INFLATION
+- fast overlays: NONE
+- slow overlays: OIL_PERSISTENT_PRESSURE
+- benign/conflict overlays: NONE
+- persistent background overlays: WTI_TAIL_STRESS
+
+## Fast / Slow Risk Timing
+- timing: SLOW_BUILDUP_MONITOR
+- WTI tail stress age: 80 trading days
+- WTI tail stress age bucket: structural_64d_plus
+- WTI timing note: WTI tail-stress has persisted beyond 21 trading days. Treat as commodity-stress background, not a fresh fast trigger.
+- slow signal ages: OIL_PERSISTENT_PRESSURE:59d:LATE_PERSISTENT_PRESSURE
+- note: This is not a fresh 1-2 week WTI tail-stress trigger. It is persistent commodity-stress background. SPY baseline remains yellow; no fresh fast macro trigger is active unless another fast overlay fires.
+
+## Expected Path Anatomy
+- path anatomy: THREE_WEEK_DANGER
+- drawdown/rebound bias: MIXED_WHIPSAW
+- clustering: IID_LIKE
+- clustering note: Large moves may be frequent, but completed audit found mostly IID-like count structure after signals.
+
+## Dashboard Verdict
+- SLOW_BUILDUP_MONITOR
+
+## Monitoring Note
+- Monitoring only, no trading rule.
+- SPY baseline remains action gate.
+- Macro overlay is context, confirmation, timing, and cause classification only.

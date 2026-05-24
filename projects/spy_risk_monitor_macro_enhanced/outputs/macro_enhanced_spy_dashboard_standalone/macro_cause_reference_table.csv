@@ -1,0 +1,11 @@
+cause,meaning,fast_or_slow,typical_risk_window,path_anatomy_summary,dashboard_use
+CAUSE_RECESSION_FEAR,rates falling because growth/risk fear is active,fast,1 week / 5-10 trading days,rebound-dominant but elevated movement risk,"leads yellow, can confirm prebreak"
+CAUSE_OIL_TIGHTENING,oil pressure has transmitted into rates or real yields,slow-to-medium,3-8 weeks depending on age,"elevated prebreak risk, not one-way bearish",prebreak lead/confirmation
+CAUSE_RATE_BURDEN,high-rate persistence or 4.75% pressure,fast/burden,1-2 weeks for confirmation; longer as burden,rebound-dominant but elevated drawdown risk,yellow/prebreak confirmation
+CAUSE_WTI_TAIL_FRESH,WTI tail-stress newly activated or active for <=10 trading days,fast,1-2 weeks,rebound-dominant but elevated movement risk,fast monitor
+CAUSE_WTI_TAIL_EXTENDED,WTI tail-stress active for 11-21 trading days,extended,already beyond initial fast window,"extended commodity stress, not a fresh trigger","watch for persistence, do not treat as fresh trigger"
+CAUSE_WTI_TAIL_PERSISTENT,WTI tail-stress active for 22+ trading days,persistent background,background stress state,persistent commodity-stress background,context only unless paired with other active macro overlays
+CAUSE_WTI_TAIL,WTI tail-stress pressure is active,age-dependent,depends on WTI tail-stress age,use fresh/extended/persistent split for timing,cause classifier
+CAUSE_GLD_SAFE_HAVEN,GLD defensive persistence or safe-haven confirmation,slow/background,background / 4-8 weeks,"confirmation, not standalone",confirms yellow/prebreak
+CAUSE_GROWTH_REFLATION,rates up but equity tape accepts it,benign/conflict,none,suppresses rate-panic interpretation,monitor only
+CAUSE_MACRO_CALM,no major macro cause active,baseline-only,none,tape/baseline driven,SPY baseline only

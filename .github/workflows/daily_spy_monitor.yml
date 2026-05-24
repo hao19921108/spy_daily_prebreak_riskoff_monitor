@@ -27,9 +27,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r projects/spy_risk_monitor/requirements.txt
 
       - name: Run SPY monitor
+        working-directory: projects/spy_risk_monitor
         run: |
           python spy_daily_prebreak_riskoff_monitor.py \
             --download \
@@ -39,6 +40,7 @@ jobs:
             --quiet
 
       - name: Show generated files
+        working-directory: projects/spy_risk_monitor
         run: |
           ls -lah outputs/spy_daily_prebreak_monitor
           echo "---- current_state_report.txt ----"
@@ -48,11 +50,11 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          python send_telegram_report.py
+        working-directory: projects/spy_risk_monitor
+        run: python send_telegram_report.py
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: spy-risk-monitor-output
-          path: outputs/spy_daily_prebreak_monitor/
+          path: projects/spy_risk_monitor/outputs/spy_daily_prebreak_monitor/

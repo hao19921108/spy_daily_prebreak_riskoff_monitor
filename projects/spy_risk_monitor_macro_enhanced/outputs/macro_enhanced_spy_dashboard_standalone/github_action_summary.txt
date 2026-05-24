@@ -1,0 +1,10 @@
+latest date: 2026-05-22 00:00:00
+SPY baseline: whipsaw_aware / YELLOW_WHIPSAW_NOT_RISK_OFF / SPY_YELLOW
+current cause: CAUSE_OIL_INFLATION
+fresh fast overlays: NONE
+persistent background overlays: WTI_TAIL_STRESS
+active overlays: slow=OIL_PERSISTENT_PRESSURE benign=NONE
+WTI tail stress age: 80 trading days (structural_64d_plus)
+risk timing: SLOW_BUILDUP_MONITOR
+dashboard verdict: SLOW_BUILDUP_MONITOR
+output files: macro_enhanced_current_dashboard.csv, macro_enhanced_current_dashboard.txt, macro_overlay_signal_status.csv, macro_cause_reference_table.csv, dashboard_file_audit.csv, github_action_summary.txt
