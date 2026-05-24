@@ -17,6 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--title", default="", help="Optional title prepended to the message.")
     parser.add_argument("--attach", action="append", default=[], help="Optional file attachment. Can be repeated.")
     parser.add_argument("--max-chars", type=int, default=3900, help="Maximum message length before truncation.")
+    parser.add_argument("--parse-mode", choices=["HTML", "MarkdownV2"], default=None, help="Optional Telegram parse mode.")
     return parser.parse_args()
 
 
@@ -29,15 +30,19 @@ def clean_secret(name: str) -> str:
     return value
 
 
-def send_message(token: str, chat_id: str, text: str) -> None:
+def send_message(token: str, chat_id: str, text: str, parse_mode: str | None = None) -> None:
     url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "disable_web_page_preview": True,
+    }
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+
     response = requests.post(
         url,
-        json={
-            "chat_id": chat_id,
-            "text": text,
-            "disable_web_page_preview": True,
-        },
+        json=payload,
         timeout=30,
     )
     response.raise_for_status()
@@ -74,7 +79,7 @@ def main() -> int:
     text = f"{args.title.strip()}\n\n{body}".strip() if args.title else body
     if len(text) > args.max_chars:
         text = text[: args.max_chars].rstrip() + "\n...[truncated]"
-    send_message(token, chat_id, text)
+    send_message(token, chat_id, text, args.parse_mode)
 
     for attachment in args.attach:
         path = Path(attachment)

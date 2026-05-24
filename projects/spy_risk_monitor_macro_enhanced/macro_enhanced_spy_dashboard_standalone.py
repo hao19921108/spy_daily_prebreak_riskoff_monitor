@@ -9,6 +9,7 @@ SPY baseline remains the action gate; macro overlays provide context.
 from __future__ import annotations
 
 import argparse
+import html
 from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
@@ -658,8 +659,10 @@ def build_dashboard(panel: pd.DataFrame, audits: list[Audit], as_of: str | None,
     pd.DataFrame([a.__dict__ for a in audits]).to_csv(output_dir / "dashboard_file_audit.csv", index=False)
     text = render_text(out.iloc[0], fast, slow, benign, background)
     (output_dir / "macro_enhanced_current_dashboard.txt").write_text(text)
-    (output_dir / "github_action_summary.txt").write_text(render_summary(out.iloc[0]))
-    print(render_summary(out.iloc[0]))
+    summary = render_summary(out.iloc[0])
+    (output_dir / "github_action_summary.txt").write_text(summary)
+    (output_dir / "github_action_summary.html").write_text(render_summary_html(out.iloc[0]))
+    print(summary)
     print("WTI age patch complete. Monitoring only. No trading rules generated.")
 
 
@@ -787,6 +790,31 @@ def render_summary(row: pd.Series) -> str:
         f"risk timing: {row['risk_timing']}",
         f"dashboard verdict: {row['current_dashboard_verdict']}",
         "output files: macro_enhanced_current_dashboard.csv, macro_enhanced_current_dashboard.txt, macro_overlay_signal_status.csv, macro_cause_reference_table.csv, dashboard_file_audit.csv, github_action_summary.txt",
+    ])
+
+
+def html_value(value: object) -> str:
+    return html.escape(str(value), quote=False)
+
+
+def html_line(label: str, value: object) -> str:
+    return f"<b>{html.escape(label, quote=False)}:</b> <code>{html_value(value)}</code>"
+
+
+def render_summary_html(row: pd.Series) -> str:
+    output_files = "macro_enhanced_current_dashboard.csv, macro_enhanced_current_dashboard.txt, macro_overlay_signal_status.csv, macro_cause_reference_table.csv, dashboard_file_audit.csv, github_action_summary.txt"
+    return "\n".join([
+        "<b>Macro-Enhanced SPY Dashboard</b>",
+        html_line("latest date", row["date"]),
+        html_line("SPY baseline", f"{row['spy_final_state_label']} / {row['spy_final_daily_label']} / {row['spy_baseline_group']}"),
+        html_line("current cause", row["current_macro_cause"]),
+        html_line("fresh fast overlays", row["fresh_fast_overlays"]),
+        html_line("persistent background overlays", row["persistent_background_overlays"]),
+        html_line("active overlays", f"slow={row['active_slow_overlays']} benign={row['active_benign_or_conflict_overlays']}"),
+        html_line("WTI tail stress age", f"{row['wti_tail_stress_age_days']} trading days ({row['wti_tail_stress_age_bucket']})"),
+        html_line("risk timing", row["risk_timing"]),
+        html_line("dashboard verdict", row["current_dashboard_verdict"]),
+        html_line("output files", output_files),
     ])
 
 

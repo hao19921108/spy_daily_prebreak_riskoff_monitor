@@ -46,8 +46,8 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python shared/send_telegram_report.py \
-            --title "Macro-Enhanced SPY Dashboard" \
-            --message-file projects/spy_risk_monitor_macro_enhanced/outputs/macro_enhanced_spy_dashboard_standalone/github_action_summary.txt
+            --message-file projects/spy_risk_monitor_macro_enhanced/outputs/macro_enhanced_spy_dashboard_standalone/github_action_summary.html \
+            --parse-mode HTML
 
       - name: Commit updated data and outputs
         if: success()
