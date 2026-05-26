@@ -1,0 +1,55 @@
+name: Composite CJM Regime Telegram
+
+on:
+  schedule:
+    - cron: "45 22 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  composite-cjm-regime:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r projects/spy_risk_monitor_macro_cjm_enhanced/requirements.txt
+
+      - name: Run composite CJM daily builder
+        working-directory: projects/spy_risk_monitor_macro_cjm_enhanced
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          python build_daily_composite_regime_from_raw.py --mode daily --tail-days 252
+
+      - name: Send Telegram summary
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python shared/send_telegram_report.py \
+            --message-file projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/github_action_summary.txt
+
+      - name: Upload composite CJM outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: composite-cjm-regime-outputs
+          path: |
+            projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/latest_composite_regime_snapshot.csv
+            projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/github_action_summary.txt
+            projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/daily_composite_regime_reviewer_report.md
+            projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/data_quality_flags.csv
+            projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/composite_phase_reference_table.csv
+            projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/daily_composite_regime_panel_tail.csv

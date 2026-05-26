@@ -5,3 +5,10 @@
 **/*.pyc
 **/daily_regime_output.txt
 **/telegram_summary.txt
+
+# Local macOS files
+.DS_Store
+
+# Composite CJM generated cache and outputs
+projects/spy_risk_monitor_macro_cjm_enhanced/data/fred_cache/
+projects/spy_risk_monitor_macro_cjm_enhanced/outputs/

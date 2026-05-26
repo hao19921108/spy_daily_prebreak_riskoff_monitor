@@ -1,6 +1,6 @@
 # Frozen Macro Risk Monitoring Repo
 
-This repo is a modular workspace for three related SPY and macro risk-monitoring
+This repo is a modular workspace for related SPY and macro risk-monitoring
 projects. Each project lives under `projects/`, keeps its own source files and
 project-level dependencies, and writes runtime artifacts inside its own project
 folder. Repo-level GitHub Actions orchestrate the projects.
@@ -21,11 +21,16 @@ folder. Repo-level GitHub Actions orchestrate the projects.
 │   │   ├── spy_daily_prebreak_riskoff_monitor.py
 │   │   ├── send_telegram_report.py
 │   │   └── requirements.txt
-│   └── spy_risk_monitor_macro_enhanced/
+│   ├── spy_risk_monitor_macro_enhanced/
 │       ├── fetch_data.py
 │       ├── macro_enhanced_spy_dashboard_standalone.py
 │       ├── requirements.txt
 │       ├── data/
+│       ├── outputs/
+│       └── README.md
+│   └── spy_risk_monitor_macro_cjm_enhanced/
+│       ├── build_daily_composite_regime_from_raw.py
+│       ├── requirements.txt
 │       ├── outputs/
 │       └── README.md
 └── .github/workflows/
@@ -37,6 +42,7 @@ The root `requirements.txt` is an aggregator only:
 -r projects/macro_regime/requirements.txt
 -r projects/spy_risk_monitor/requirements.txt
 -r projects/spy_risk_monitor_macro_enhanced/requirements.txt
+-r projects/spy_risk_monitor_macro_cjm_enhanced/requirements.txt
 ```
 
 This keeps GitHub Actions simple while allowing each project to remain independently
@@ -112,6 +118,20 @@ python macro_enhanced_spy_dashboard_standalone.py --base-dir . --output-dir outp
 Telegram: the workflow sends
 `projects/spy_risk_monitor_macro_enhanced/outputs/macro_enhanced_spy_dashboard_standalone/github_action_summary.txt`
 through `shared/send_telegram_report.py`.
+
+### Composite / CJM-Enhanced SPY Regime Monitor
+
+Path: `projects/spy_risk_monitor_macro_cjm_enhanced/`
+
+Main script: `build_daily_composite_regime_from_raw.py`
+
+Workflow: `.github/workflows/composite_cjm_telegram.yml`
+
+Purpose: Downstream composite regime daily build/review layer. Sends
+`github_action_summary.txt` to Telegram and uploads CSV/MD daily outputs as
+artifacts.
+
+Scope: Regime classification only. No trading advice.
 
 ## Macro-Enhanced Data Sources
 
