@@ -166,26 +166,54 @@ def read_price_file(path: Path, symbol: str) -> pd.DataFrame:
     return out
 
 
+def annotate_source(df: pd.DataFrame, path_or_provider: str, status: str, warning: str = "") -> pd.DataFrame:
+    df.attrs["path_or_provider"] = path_or_provider
+    df.attrs["source_status"] = status
+    df.attrs["source_warning"] = warning
+    return df
+
+
+def price_audit_row(source_name: str, df: pd.DataFrame, fallback_path: str = "") -> Dict[str, object]:
+    latest = pd.to_datetime(df["date"], errors="coerce").max() if len(df) and "date" in df else pd.NaT
+    return {
+        "source_name": source_name,
+        "path_or_provider": df.attrs.get("path_or_provider", fallback_path),
+        "latest_date": latest.date().isoformat() if pd.notna(latest) else "",
+        "rows": int(len(df)),
+        "status": df.attrs.get("source_status", "missing" if df.empty else "ok"),
+        "warning": df.attrs.get("source_warning", ""),
+    }
+
+
 def load_price(symbol: str, names: Sequence[str], allow_yfinance: bool = False) -> pd.DataFrame:
-    for path in find_files(names):
-        try:
-            return read_price_file(path, symbol)
-        except Exception as exc:
-            log(f"Skipping unusable {symbol} price file {path}: {exc}")
+    refresh_warning = ""
     if symbol == "SPY" and allow_yfinance:
         try:
             import yfinance as yf
 
+            log("Refreshing SPY from yfinance before reading local CSV.")
             raw = yf.download("SPY", start="2000-01-01", auto_adjust=False, progress=False)
             raw = normalize_yfinance_columns(raw)
+            if raw.empty:
+                raise RuntimeError("yfinance returned no SPY rows")
             raw = raw.reset_index()
-            raw.to_csv(DATA_DIR / "SPY_20y.csv", index=False)
-            return read_price_file(DATA_DIR / "SPY_20y.csv", symbol)
-        except Exception:
-            pass
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            target = DATA_DIR / "SPY_20y.csv"
+            raw.to_csv(target, index=False)
+            out = read_price_file(target, symbol)
+            return annotate_source(out, f"yfinance:{target}", "fresh", "")
+        except Exception as exc:
+            refresh_warning = f"WARNING: SPY yfinance refresh failed; falling back to local CSV. Error: {exc}"
+            log(refresh_warning)
+    for path in find_files(names):
+        try:
+            status = "warning" if refresh_warning else "ok"
+            return annotate_source(read_price_file(path, symbol), str(path), status, refresh_warning)
+        except Exception as exc:
+            log(f"Skipping unusable {symbol} price file {path}: {exc}")
     if symbol == "SPY":
-        raise FileNotFoundError("SPY price data is required.")
-    return pd.DataFrame(columns=["date"])
+        raise FileNotFoundError(f"SPY price data is required. {refresh_warning}".strip())
+    return annotate_source(pd.DataFrame(columns=["date"]), "local CSV", "missing", f"No local {symbol} file found.")
 
 
 def fred_raw_to_series(path: Path, sid: str) -> pd.Series:
@@ -280,6 +308,7 @@ def build_fred_panel(spy_dates: pd.DatetimeIndex, args: argparse.Namespace) -> T
 
 def build_market_panel(args: argparse.Namespace) -> pd.DataFrame:
     spy = load_price("SPY", ["SPY_20y.csv", "SPY.csv", "SPY_max.csv"], args.allow_yfinance)
+    source_rows = [price_audit_row("SPY", spy)]
     panel = spy.copy()
     for sym, names in {
         "VIX": ["^VIX_20y.csv", "VIX_20y.csv"],
@@ -289,6 +318,8 @@ def build_market_panel(args: argparse.Namespace) -> pd.DataFrame:
         "XLU": ["XLU_20y.csv", "XLU.csv"],
     }.items():
         px = load_price(sym, names)
+        if sym == "VIX":
+            source_rows.append(price_audit_row("VIX local CSV", px))
         if len(px):
             panel = panel.merge(px[["date", f"{sym}_close"]], on="date", how="left")
     panel = panel.sort_values("date").ffill()
@@ -317,7 +348,9 @@ def build_market_panel(args: argparse.Namespace) -> pd.DataFrame:
     panel["vix_above_10d_ma"] = panel["vix_level"] > panel["vix_10d_ma"] if "vix_level" in panel else False
     panel["vix_falling_5d"] = panel["vix_change_5d"] < 0
     panel["vix_falling_10d"] = panel["vix_change_10d"] < 0
-    return panel.set_index("date")
+    out = panel.set_index("date")
+    out.attrs["source_audit_rows"] = source_rows
+    return out
 
 
 def add_regime_layer(daily: pd.DataFrame) -> pd.DataFrame:
@@ -747,12 +780,12 @@ def weekday_count(start: pd.Timestamp, end: pd.Timestamp) -> int:
     return int(sum(d.weekday() < 5 for d in pd.date_range(start + pd.Timedelta(days=1), end, freq="D")))
 
 
-def latest_snapshot(df: pd.DataFrame, ref: pd.DataFrame) -> pd.DataFrame:
+def latest_snapshot(df: pd.DataFrame, ref: pd.DataFrame, max_stale_trading_days: int = 2) -> pd.DataFrame:
     latest = df.iloc[-1]
     today = pd.Timestamp(datetime.now(timezone.utc).date())
     latest_date = pd.Timestamp(latest.name)
     stale = weekday_count(latest_date, today)
-    fresh = "fresh" if stale <= 2 else ("mildly_stale" if stale <= 5 else "stale")
+    fresh = "fresh" if stale <= max_stale_trading_days else ("mildly_stale" if stale <= max_stale_trading_days + 3 else "stale")
     refd = ref.set_index("phase").to_dict("index").get(latest["composite_phase_label"], {})
     low_conf = latest["composite_confidence"] == "low" or latest["VIX_ONLY_max_probability"] < 0.45 or latest["FULL_PUBLIC_MACRO_max_probability"] < 0.45
     missing_macro = pd.isna(latest.get("macro_cause_primary"))
@@ -795,13 +828,19 @@ def latest_snapshot(df: pd.DataFrame, ref: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame([row])
 
 
-def data_quality(spy_loaded: bool, fred_log: pd.DataFrame, df: pd.DataFrame, snapshot: pd.DataFrame, fits: Dict[str, CJMFit]) -> pd.DataFrame:
+def data_quality(spy_loaded: bool, fred_log: pd.DataFrame, df: pd.DataFrame, snapshot: pd.DataFrame, fits: Dict[str, CJMFit], source_audit: pd.DataFrame) -> pd.DataFrame:
     s = snapshot.iloc[0]
+    spy_audit = source_audit[source_audit["source_name"].eq("SPY")]
+    vix_audit = source_audit[source_audit["source_name"].eq("VIX")]
+    spy_detail = spy_audit.iloc[0].to_dict() if len(spy_audit) else {}
+    spy_warning = spy_audit["warning"].iloc[0] if len(spy_audit) else ""
+    vix_detail = vix_audit.iloc[0].to_dict() if len(vix_audit) else {}
     rows = [
         ("SPY source loaded", "ok" if spy_loaded else "error", "SPY price data is required."),
+        ("SPY source freshness", "warning" if spy_warning else "ok", spy_warning or f"source={spy_detail.get('path_or_provider', '')}; latest={spy_detail.get('latest_date', s['latest_data_date'])}."),
         ("FRED cache loaded/fetched", "ok" if (fred_log["status"].astype(str).str.contains("failed").sum() < len(fred_log)) else "warning", f"Loaded/fetched {len(fred_log) - fred_log['status'].astype(str).str.contains('failed').sum()} series."),
         ("FRED series failures", "warning" if fred_log["status"].astype(str).str.contains("failed").any() else "ok", "; ".join(fred_log.loc[fred_log["status"].astype(str).str.contains("failed"), "series_id"].astype(str).tolist())),
-        ("VIX source loaded", "ok" if df["vix_level"].notna().any() else "warning", "VIX local/FRED data availability."),
+        ("VIX source loaded", "ok" if df["vix_level"].notna().any() else "warning", f"source={vix_detail.get('path_or_provider', '')}; latest={vix_detail.get('latest_date', '')}; {vix_detail.get('warning', '')}".strip()),
         ("latest data not stale", "ok" if s["data_freshness_flag"] == "fresh" else "warning", str(s["data_freshness_flag"])),
         ("CJM labels built for all universes", "ok" if set(fits) == set(UNIVERSES) else "warning", ",".join(sorted(fits))),
         ("macro regime built", "ok" if df["macro_spy_regime_normalized"].notna().any() else "error", "Dashboard-like regime computed."),
@@ -1088,7 +1127,50 @@ def daily_markdown_report(snap: pd.DataFrame, qual: pd.DataFrame, tail: pd.DataF
 """
 
 
-def write_daily_outputs(outdir: Path, daily: pd.DataFrame, ref: pd.DataFrame, snap: pd.DataFrame, qual: pd.DataFrame, tail_days: int) -> List[Path]:
+def series_latest_date(df: pd.DataFrame, col: str) -> str:
+    if col not in df:
+        return ""
+    idx = df.index[df[col].notna()]
+    return idx.max().date().isoformat() if len(idx) else ""
+
+
+def build_data_source_audit(market: pd.DataFrame, fred_daily: pd.DataFrame, daily: pd.DataFrame, vix_source: str, vix_warning: str) -> pd.DataFrame:
+    rows = list(market.attrs.get("source_audit_rows", []))
+    rows = [row for row in rows if row.get("source_name") != "VIX local CSV"]
+    rows.append(
+        {
+            "source_name": "VIX",
+            "path_or_provider": vix_source,
+            "latest_date": series_latest_date(daily, "vix_level"),
+            "rows": int(daily["vix_level"].notna().sum()) if "vix_level" in daily else 0,
+            "status": "ok" if "vix_level" in daily and daily["vix_level"].notna().any() else "warning",
+            "warning": vix_warning,
+        }
+    )
+    rows.append(
+        {
+            "source_name": "FRED macro panel",
+            "path_or_provider": "FRED cache/fetch",
+            "latest_date": fred_daily.index.max().date().isoformat() if len(fred_daily) else "",
+            "rows": int(len(fred_daily)),
+            "status": "ok" if len(fred_daily) else "warning",
+            "warning": "" if len(fred_daily) else "FRED macro panel is empty.",
+        }
+    )
+    rows.append(
+        {
+            "source_name": "final daily panel",
+            "path_or_provider": "in-memory daily build",
+            "latest_date": daily.index.max().date().isoformat() if len(daily) else "",
+            "rows": int(len(daily)),
+            "status": "ok" if len(daily) else "error",
+            "warning": "",
+        }
+    )
+    return pd.DataFrame(rows, columns=["source_name", "path_or_provider", "latest_date", "rows", "status", "warning"])
+
+
+def write_daily_outputs(outdir: Path, daily: pd.DataFrame, ref: pd.DataFrame, snap: pd.DataFrame, qual: pd.DataFrame, source_audit: pd.DataFrame, tail_days: int) -> List[Path]:
     clean_daily_output_dir(outdir)
     tail = daily_tail_panel(daily, ref, snap, tail_days)
     files = [
@@ -1098,6 +1180,7 @@ def write_daily_outputs(outdir: Path, daily: pd.DataFrame, ref: pd.DataFrame, sn
         outdir / "data_quality_flags.csv",
         outdir / "composite_phase_reference_table.csv",
         outdir / "daily_composite_regime_panel_tail.csv",
+        outdir / "data_source_audit.csv",
     ]
     snap.to_csv(files[0], index=False)
     files[1].write_text(github_summary(snap), encoding="utf-8")
@@ -1105,6 +1188,7 @@ def write_daily_outputs(outdir: Path, daily: pd.DataFrame, ref: pd.DataFrame, sn
     qual.to_csv(files[3], index=False)
     ref.to_csv(files[4], index=False)
     tail.to_csv(files[5], index=False)
+    source_audit.to_csv(files[6], index=False)
     return files
 
 
@@ -1199,13 +1283,6 @@ def write_research_outputs(
     return files
 
 
-def copy_key_outputs(outdir: Path) -> None:
-    for name in ["daily_composite_regime_panel.csv", "daily_composite_regime_panel_patched.csv", "latest_composite_regime_snapshot.csv", "composite_phase_reference_table.csv", "data_quality_flags.csv", "github_action_summary.txt", "daily_composite_regime_reviewer_report_patched.md"]:
-        p = outdir / name
-        if p.exists():
-            (BASE_DIR / name).write_bytes(p.read_bytes())
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--mode", choices=["daily", "research"], default="daily")
@@ -1218,6 +1295,8 @@ def main() -> int:
     ap.add_argument("--refresh-fred", action="store_true")
     ap.add_argument("--fred-cache-dir", default=str(DATA_DIR / "fred_cache"))
     ap.add_argument("--output-dir", default=None)
+    ap.add_argument("--fail-if-stale", action="store_true")
+    ap.add_argument("--max-stale-trading-days", type=int, default=2)
     ap.add_argument("--k", type=int, default=3)
     ap.add_argument("--lambda-cjm", type=float, default=100.0)
     ap.add_argument("--random-state", type=int, default=42)
@@ -1228,11 +1307,34 @@ def main() -> int:
     outdir, fred_cache = Path(args.output_dir) if args.output_dir else default_out, Path(args.fred_cache_dir)
     ensure_dirs(outdir, fred_cache)
 
+    run_timestamp = datetime.now(timezone.utc).isoformat()
+    log(f"Run timestamp UTC: {run_timestamp}")
+    log(f"Output directory: {outdir}")
     market = build_market_panel(args)
     fred_daily, fred_weekly, fred_log = build_fred_panel(market.index, args)
     daily = market.join(fred_daily, how="left")
-    if "vix_level" not in daily or daily["vix_level"].isna().all():
-        daily["vix_level"] = daily.get("VIXCLS", np.nan)
+    vix_source = "local VIX CSV"
+    vix_warning = ""
+    if "vix_level" not in daily:
+        daily["vix_level"] = np.nan
+    local_vix_latest = daily.index[daily["vix_level"].notna()].max() if daily["vix_level"].notna().any() else pd.NaT
+    fred_vix_latest = daily.index[daily["VIXCLS"].notna()].max() if "VIXCLS" in daily and daily["VIXCLS"].notna().any() else pd.NaT
+    if "VIXCLS" in daily and pd.notna(fred_vix_latest) and (pd.isna(local_vix_latest) or fred_vix_latest > local_vix_latest):
+        daily["vix_level"] = daily["VIXCLS"].combine_first(daily["vix_level"])
+        vix_source = "FRED VIXCLS"
+        if pd.notna(local_vix_latest):
+            vix_warning = f"Local VIX latest date {local_vix_latest.date().isoformat()} was older than FRED VIXCLS {fred_vix_latest.date().isoformat()}; used FRED VIXCLS."
+            log(f"WARNING: {vix_warning}")
+    elif daily["vix_level"].isna().all():
+        vix_source = "missing"
+        vix_warning = "VIX data missing from local CSV and FRED VIXCLS."
+        log(f"WARNING: {vix_warning}")
+    for h in [5, 10, 21]:
+        daily[f"vix_change_{h}d"] = daily["vix_level"].diff(h)
+    daily["vix_10d_ma"] = daily["vix_level"].rolling(10, min_periods=5).mean()
+    daily["vix_above_10d_ma"] = daily["vix_level"] > daily["vix_10d_ma"]
+    daily["vix_falling_5d"] = daily["vix_change_5d"] < 0
+    daily["vix_falling_10d"] = daily["vix_change_10d"] < 0
     daily = add_macro_causes(add_regime_layer(daily))
 
     weekly_feat, inv = build_weekly_features(daily)
@@ -1247,8 +1349,9 @@ def main() -> int:
     daily = add_forward_metrics(add_composite(daily))
 
     ref = phase_reference_table()
-    snap = latest_snapshot(daily, ref)
-    qual = data_quality(True, fred_log, daily, snap, fits)
+    snap = latest_snapshot(daily, ref, args.max_stale_trading_days)
+    source_audit = build_data_source_audit(market, fred_daily, daily, vix_source, vix_warning)
+    qual = data_quality(True, fred_log, daily, snap, fits, source_audit)
     beh18 = summarize_behavior(daily, pd.Timestamp(args.primary_report_start))
     beh20 = summarize_behavior(daily, pd.Timestamp(args.secondary_report_start))
     ep, trans, dur = episode_outputs(daily)
@@ -1257,7 +1360,7 @@ def main() -> int:
 
     daily.index.name = "date"
     if args.mode == "daily":
-        written = write_daily_outputs(outdir, daily, ref, snap, qual, args.tail_days)
+        written = write_daily_outputs(outdir, daily, ref, snap, qual, source_audit, args.tail_days)
     else:
         written = write_research_outputs(
             outdir, daily, fred_daily, fred_weekly, weekly_feat, inv, fits, meta, char, ref, snap, qual,
@@ -1265,8 +1368,12 @@ def main() -> int:
         )
 
     s = snap.iloc[0]
+    report_file = outdir / "github_action_summary.txt" if args.mode == "daily" else outdir / "current" / "github_action_summary.txt"
     print("Daily Composite Regime Build Complete\n")
+    print(f"Run timestamp UTC: {run_timestamp}")
     print(f"Latest date: {s['latest_data_date']}")
+    print(f"Latest SPY data date: {source_audit.loc[source_audit['source_name'].eq('SPY'), 'latest_date'].iloc[0]}")
+    print(f"Latest final panel date: {s['latest_data_date']}")
     print(f"Composite phase: {s['composite_phase_label_patched']}")
     print(f"Macro SPY regime: {s['macro_spy_regime']}")
     print(f"Macro cause: {s['macro_cause']}")
@@ -1274,6 +1381,8 @@ def main() -> int:
     print(f"Full macro layer: {s['FULL_PUBLIC_MACRO_broad_meta_label']} / {s['FULL_PUBLIC_MACRO_severity_label']} / {s['FULL_PUBLIC_MACRO_max_probability']:.3f}")
     print(f"Data freshness: {s['data_freshness_flag']}")
     print(f"Quality summary: {s['data_quality_summary']}")
+    print(f"Output directory: {outdir}")
+    print(f"Notification report file: {report_file}")
     print(f"FRED series loaded: {(~fred_log['status'].astype(str).str.contains('failed')).sum()}")
     print(f"FRED series failed: {fred_log['status'].astype(str).str.contains('failed').sum()}")
     print("Files written:")
@@ -1293,8 +1402,11 @@ def main() -> int:
         ]:
             print(f"- {path.relative_to(outdir)}")
     print(f"\n{NO_ADVICE}")
+    if args.fail_if_stale and s["data_freshness_flag"] == "stale":
+        print("Latest report is stale; notification should not be sent.", file=sys.stderr)
+        return 2
     if args.mode == "daily":
-        print("Daily mode complete: 6 files written.")
+        print("Daily mode complete: 7 files written.")
     else:
         print("Research mode complete: full diagnostics written.")
     return 0

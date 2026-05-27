@@ -2,7 +2,7 @@ name: Composite CJM Regime Telegram
 
 on:
   schedule:
-    - cron: "45 22 * * 1-5"
+    - cron: "37 22 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -32,7 +32,20 @@ jobs:
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
-          python build_daily_composite_regime_from_raw.py --mode daily --tail-days 252
+          python build_daily_composite_regime_from_raw.py \
+            --mode daily \
+            --allow-yfinance \
+            --refresh-fred \
+            --fail-if-stale \
+            --max-stale-trading-days 2 \
+            --output-dir outputs/daily_composite_regime
+
+      - name: Verify fresh daily outputs
+        working-directory: projects/spy_risk_monitor_macro_cjm_enhanced
+        run: |
+          cat outputs/daily_composite_regime/latest_composite_regime_snapshot.csv
+          cat outputs/daily_composite_regime/data_source_audit.csv
+          test -s outputs/daily_composite_regime/github_action_summary.txt
 
       - name: Send Telegram summary
         env:
@@ -53,3 +66,16 @@ jobs:
             projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/data_quality_flags.csv
             projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/composite_phase_reference_table.csv
             projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/daily_composite_regime_panel_tail.csv
+            projects/spy_risk_monitor_macro_cjm_enhanced/outputs/daily_composite_regime/data_source_audit.csv
+
+      - name: Verify generated report
+        run: |
+          echo "=== Latest snapshot ==="
+          cat outputs/daily_composite_regime/latest_composite_regime_snapshot.csv
+
+          echo "=== Data source audit ==="
+          cat outputs/daily_composite_regime/data_source_audit.csv
+
+          echo "=== GitHub summary ==="
+          test -s outputs/daily_composite_regime/github_action_summary.txt
+          cat outputs/daily_composite_regime/github_action_summary.txt
